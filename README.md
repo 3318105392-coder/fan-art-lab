@@ -40,9 +40,11 @@ src/
 └── utils/               # 工具函数
 ```
 
-## 部署
+## 在线访问
 
-已部署于 Vercel，每次 `git push` 自动更新。
+🔗 **[fan-art-lab.pages.dev](https://fan-art-lab.pages.dev)**
+
+部署于 Cloudflare Pages，每次 `git push` 自动更新。国内可正常访问。
 
 ## 作者
 
