@@ -211,18 +211,6 @@ const STICKER_CATEGORIES: StickerCategory[] = [
     '🔥', '💎', '👑', '🎯', '💿', '📀', '🎤', '🎧', '📷',
     '🍀', '🌈', '❄️', '🫧', '🪐', '🌙', '⚡', '🎪', '🃏', '🎭',
   ]},
-  { key: 'sweetcool', label: '甜酷', type: 'emoji', stickers: [
-    '🖤', '💀', '🌹', '🕷️', '🕸️', '⛓️', '🗡️', '🩸', '💋', '🦇',
-    '🔮', '🥀', '⚰️', '🪦', '🧷', '🩹', '🎱', '♠️', '♦️', '🃏',
-  ]},
-  { key: 'dopamine', label: '多巴胺', type: 'emoji', stickers: [
-    '🌈', '🦄', '🍭', '🎀', '💝', '🧸', '🎈', '🍬', '💖', '🌟',
-    '🍩', '🧁', '🎪', '🎠', '💫', '🌸', '🏵️', '🎨', '🪅', '🎉',
-  ]},
-  { key: 'deco', label: '装饰线框', type: 'emoji', stickers: [
-    '―', '═', '┄', '┅', '○', '●', '◇', '◆', '□', '■',
-    '△', '▲', '▽', '▼', '♡', '♥', '♢', '♦', '◌', '◎',
-  ]},
   // Image-based sticker folders
   { key: 'stars', label: '星星', type: 'image', stickers: [], folder: '星星' },
   { key: 'hearts', label: '爱心', type: 'image', stickers: [], folder: '爱心' },
