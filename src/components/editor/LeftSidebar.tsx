@@ -158,7 +158,7 @@ function TemplateTab() {
   const templateFiles = Array.from({ length: 49 }, (_, i) => {
     const group = String(Math.floor(i / 4) + 1).padStart(2, '0')
     const idx = String((i % 4) + 1).padStart(2, '0')
-    return `/templates/polaroid/${group}${idx}.jpg`
+    return `/templates/polaroid/${group}${idx}.png`
   })
 
   useEffect(() => {
