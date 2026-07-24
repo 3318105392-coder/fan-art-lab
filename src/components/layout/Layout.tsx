@@ -17,8 +17,7 @@ export default function Layout() {
       <header className="bg-white/80 backdrop-blur-md border-b border-indigo-50 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 text-xl font-bold text-indigo-500 no-underline tracking-tight">
-            <span className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center text-lg">🌸</span>
+          <Link to="/" className="text-xl font-bold text-indigo-500 no-underline tracking-tight">
             FanArt Lab
           </Link>
 
@@ -59,7 +58,7 @@ export default function Layout() {
       {/* Footer */}
       {isHome && (
         <footer className="bg-white border-t border-indigo-50 py-8 text-center text-sm text-gray-400">
-          <p className="font-medium text-gray-500">🌸 FanArt Lab — 为爱发电的物料小工具</p>
+          <p className="font-medium text-gray-500">FanArt Lab — 为爱发电的物料小工具</p>
           <p className="mt-1">免费 · 无需登录 · 高清下载 · 隐私安全</p>
         </footer>
       )}
