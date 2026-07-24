@@ -6,7 +6,6 @@ import { generateId, mmToPx } from '../../utils'
 import EditorCanvas from '../../components/editor/EditorCanvas'
 import LayerPanel from '../../components/editor/LayerPanel'
 import LeftSidebar from '../../components/editor/LeftSidebar'
-import type { ImageLayer, TextLayer } from '../../types'
 
 type Side = 'front' | 'back'
 

@@ -8,7 +8,6 @@ import { generateId, mmToPx } from '../../utils'
 type Tab = 'preview' | 'template' | 'sticker' | 'text'
 
 export default function LeftSidebar() {
-  const { state, dispatch } = useEditor()
   const location = useLocation()
   const isPolaroid = location.pathname.includes('polaroid')
   const [activeTab, setActiveTab] = useState<Tab>(isPolaroid ? 'template' : 'preview')

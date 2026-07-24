@@ -5,7 +5,6 @@ import EditorCanvas from '../../components/editor/EditorCanvas'
 import PolaroidCanvas from '../../components/editor/PolaroidCanvas'
 import LayerPanel from '../../components/editor/LayerPanel'
 import LeftSidebar from '../../components/editor/LeftSidebar'
-import type { ImageLayer, TextLayer } from '../../types'
 
 const POLAROID_SIZE = { width: 54, height: 86, bleed: 1.5 }
 type Side = 'front' | 'back'

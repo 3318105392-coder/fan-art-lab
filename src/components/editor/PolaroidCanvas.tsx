@@ -37,7 +37,7 @@ export default function PolaroidCanvas() {
   const stageRef = useRef<Konva.Stage>(null)
   const transformerRef = useRef<Konva.Transformer>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const { canvasSize, zoom, showBleed, showGrid, layers, selectedLayerId, backgroundColor } = state
+  const { canvasSize, zoom, showBleed, layers, selectedLayerId, backgroundColor } = state
 
   const [frame, setFrame] = useState<PolaroidFrameConfig>(DEFAULT_FRAME)
   const hasTemplate = layers.some(l => l.name === '模版')
@@ -65,7 +65,6 @@ export default function PolaroidCanvas() {
   const photoW = safeW - borderPx * 2
   const photoH = safeH - borderPx - bottomH
   const bottomY = photoY + photoH
-  const bottomW = safeW
 
   // Immediate close on click outside text editing
   useEffect(() => {
@@ -169,7 +168,7 @@ export default function PolaroidCanvas() {
         onClick={(e) => { if (e.target === containerRef.current) dispatch({ type: 'SELECT_LAYER', id: null }) }}>
         <Stage ref={stageRef} width={canvasPxW} height={canvasPxH}
           scaleX={zoom} scaleY={zoom}
-          onClick={handleStageClick} onTap={handleStageClick}>
+          onClick={handleStageClick}>
 
           {/* Layer 1 - Main content */}
           <Layer name="main">
@@ -185,8 +184,7 @@ export default function PolaroidCanvas() {
                 if (pos === framePos && frameIdx >= 0) {
                   items.push(
                     <PolaroidFrameRender key="frame" frame={frame} hasTemplate={hasTemplate}
-                      canvasW={canvasPxW / zoom} canvasH={canvasPxH / zoom}
-                      bleedPx={bleedPx} safeW={safeW}
+                      canvasW={canvasPxW / zoom}
                       photoX={photoX} photoY={photoY} photoW={photoW} photoH={photoH}
                       bottomY={bottomY} bottomH={bottomH}
                       backgroundColor={backgroundColor} />
@@ -238,7 +236,7 @@ export default function PolaroidCanvas() {
   )
 }
 
-function PolaroidFrameRender({ frame, hasTemplate, canvasW, canvasH, bleedPx, safeW, photoX, photoY, photoW, photoH, bottomY, bottomH, backgroundColor }: any) {
+function PolaroidFrameRender({ frame, hasTemplate, canvasW, photoX, photoY, photoW, photoH, bottomY, bottomH, backgroundColor }: any) {
   if (hasTemplate) return null
   // Slight overlap (1px) to eliminate sub-pixel gaps between border strips
   const overlap = 1
@@ -265,7 +263,7 @@ function PolaroidFrameRender({ frame, hasTemplate, canvasW, canvasH, bleedPx, sa
   )
 }
 
-function PolaroidLayerItem({ layer, isSelected, onDragEnd, onTransformEnd, onSelect, onDblClick }: {
+function PolaroidLayerItem({ layer, onDragEnd, onTransformEnd, onSelect, onDblClick }: {
   layer: LayerType; isSelected: boolean
   onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => void
   onTransformEnd: (node: Konva.Group) => void

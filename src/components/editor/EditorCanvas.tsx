@@ -145,7 +145,7 @@ export default function EditorCanvas() {
       onClick={(e) => { if (e.target === containerRef.current) dispatch({ type: 'SELECT_LAYER', id: null }) }}>
       <Stage ref={stageRef} width={canvasPxW} height={canvasPxH}
         scaleX={zoom} scaleY={zoom}
-        onClick={handleStageClick} onTap={handleStageClick}>
+        onClick={handleStageClick}>
 
         {/* Layer 1 - Main content */}
         <Layer name="main">
@@ -199,7 +199,7 @@ export default function EditorCanvas() {
   )
 }
 
-function CanvasLayerItem({ layer, isSelected, onDragEnd, onTransformEnd, onSelect, onDblClick }: {
+function CanvasLayerItem({ layer, onDragEnd, onTransformEnd, onSelect, onDblClick }: {
   layer: LayerType; isSelected: boolean
   onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => void
   onTransformEnd: (node: Konva.Group) => void
