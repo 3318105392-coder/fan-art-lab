@@ -202,34 +202,53 @@ function TemplateTab() {
 }
 
 /* ====== 贴纸素材 Tab ====== */
-type StickerCategory = { key: string; label: string; stickers: string[] }
+type StickerCategory = { key: string; label: string; type: 'emoji' | 'image'; stickers: string[]; folder?: string }
 
 const STICKER_CATEGORIES: StickerCategory[] = [
-  { key: 'emoji', label: 'Emoji', stickers: [
+  { key: 'emoji', label: 'Emoji', type: 'emoji', stickers: [
     '⭐', '🌟', '💫', '✨', '❤️', '💖', '💗', '💝', '💜', '💙',
     '🌸', '🌺', '🌷', '💐', '🎀', '🎵', '🎶', '♪', '🦋', '☁️',
     '🔥', '💎', '👑', '🎯', '💿', '📀', '🎤', '🎧', '📷',
     '🍀', '🌈', '❄️', '🫧', '🪐', '🌙', '⚡', '🎪', '🃏', '🎭',
   ]},
-  { key: 'sweetcool', label: '甜酷', stickers: [
+  { key: 'sweetcool', label: '甜酷', type: 'emoji', stickers: [
     '🖤', '💀', '🌹', '🕷️', '🕸️', '⛓️', '🗡️', '🩸', '💋', '🦇',
     '🔮', '🥀', '⚰️', '🪦', '🧷', '🩹', '🎱', '♠️', '♦️', '🃏',
   ]},
-  { key: 'dopamine', label: '多巴胺', stickers: [
+  { key: 'dopamine', label: '多巴胺', type: 'emoji', stickers: [
     '🌈', '🦄', '🍭', '🎀', '💝', '🧸', '🎈', '🍬', '💖', '🌟',
     '🍩', '🧁', '🎪', '🎠', '💫', '🌸', '🏵️', '🎨', '🪅', '🎉',
   ]},
-  { key: 'deco', label: '装饰线框', stickers: [
+  { key: 'deco', label: '装饰线框', type: 'emoji', stickers: [
     '―', '═', '┄', '┅', '○', '●', '◇', '◆', '□', '■',
     '△', '▲', '▽', '▼', '♡', '♥', '♢', '♦', '◌', '◎',
   ]},
+  // Image-based sticker folders
+  { key: 'stars', label: '星星', type: 'image', stickers: [], folder: '星星' },
+  { key: 'hearts', label: '爱心', type: 'image', stickers: [], folder: '爱心' },
+  { key: 'paws', label: '猫爪', type: 'image', stickers: [], folder: '猫爪' },
+  { key: 'bows', label: '蝴蝶结', type: 'image', stickers: [], folder: '蝴蝶结' },
+  { key: 'notes', label: '音符', type: 'image', stickers: [], folder: '音符' },
 ]
 
 function StickerTab() {
   const { dispatch, state } = useEditor()
   const [activeCat, setActiveCat] = useState('emoji')
 
-  const addSticker = (emoji: string) => {
+  const currentCat = STICKER_CATEGORIES.find(c => c.key === activeCat)
+
+  // Get image files for a folder
+  const getImageStickers = (folder: string): string[] => {
+    const ranges: Record<string, [number, number]> = {
+      '星星': [5945, 5976], '爱心': [7748, 8601],
+      '猫爪': [7817, 7836], '蝴蝶结': [7797, 7816], '音符': [7728, 7747],
+    }
+    const [start, end] = ranges[folder] || [1, 40]
+    return Array.from({ length: end - start + 1 }, (_, i) =>
+      `/stickers/${folder}/IMG_${start + i}.png`)
+  }
+
+  const addEmojiSticker = (emoji: string) => {
     const id = generateId()
     const { canvasSize } = state
     dispatch({ type: 'ADD_LAYER', layer: {
@@ -245,7 +264,24 @@ function StickerTab() {
     }})
   }
 
-  const currentCat = STICKER_CATEGORIES.find(c => c.key === activeCat)
+  const addImageSticker = (src: string) => {
+    const id = generateId()
+    const { canvasSize } = state
+    const size = mmToPx(15) // ~56px
+    dispatch({ type: 'ADD_LAYER', layer: {
+      id, type: 'sticker',
+      x: mmToPx(canvasSize.width / 2 + canvasSize.bleed) - size / 2,
+      y: mmToPx(canvasSize.height / 2 + canvasSize.bleed) - size / 2,
+      width: size, height: size,
+      rotation: 0, scaleX: 1, scaleY: 1,
+      visible: true, locked: false, name: '贴纸',
+      src,
+    }})
+  }
+
+  const stickers = currentCat?.type === 'image' && currentCat?.folder
+    ? getImageStickers(currentCat.folder)
+    : (currentCat?.stickers || [])
 
   return (
     <div>
@@ -259,12 +295,21 @@ function StickerTab() {
         ))}
       </div>
       {currentCat && (
-        <div className="grid grid-cols-5 gap-2">
-          {currentCat.stickers.map(emoji => (
-            <button key={emoji + currentCat.key} onClick={() => addSticker(emoji)}
-              className="w-10 h-10 rounded-xl bg-gray-50 hover:bg-indigo-50 hover:scale-110
-                flex items-center justify-center text-lg transition-all border border-gray-100"
-              title={emoji}>{emoji}</button>
+        <div className={currentCat.type === 'image' ? 'grid grid-cols-4 gap-2' : 'grid grid-cols-5 gap-2'}>
+          {stickers.map((s, i) => (
+            currentCat.type === 'image' ? (
+              <button key={i} onClick={() => addImageSticker(s)}
+                className="aspect-square rounded-xl bg-gray-50 hover:bg-indigo-50 hover:scale-105
+                  flex items-center justify-center transition-all border border-gray-100 overflow-hidden p-1">
+                <img src={s} alt="" className="max-w-full max-h-full object-contain"
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+              </button>
+            ) : (
+              <button key={s} onClick={() => addEmojiSticker(s)}
+                className="w-10 h-10 rounded-xl bg-gray-50 hover:bg-indigo-50 hover:scale-110
+                  flex items-center justify-center text-lg transition-all border border-gray-100"
+                title={s}>{s}</button>
+            )
           ))}
         </div>
       )}
