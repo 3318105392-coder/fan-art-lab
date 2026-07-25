@@ -1,5 +1,5 @@
-import { useCallback, useRef, useState, useEffect } from 'react'
-import { Stage, Layer, Rect, Text, Image as KonvaImage, Group, Transformer } from 'react-konva'
+import React, { useCallback, useRef, useState, useEffect } from 'react'
+import { Stage, Layer, Rect, Text, Line, Shape, Image as KonvaImage, Group, Transformer } from 'react-konva'
 import type Konva from 'konva'
 import { useEditor } from '../../store/editorStore'
 import { mmToPx } from '../../utils'
@@ -162,9 +162,8 @@ export default function EditorCanvas() {
 
         {/* Layer 1 - Main content */}
         <Layer name="main">
-          {/* Background color fills entire canvas (border to border) */}
-          <Rect x={0} y={0} width={canvasPxW / zoom} height={canvasPxH / zoom}
-            fill={backgroundColor} />
+          {/* Background color (hidden when sticker shape is active) */}
+          <StickerBackground backgroundColor={backgroundColor} canvasW={canvasPxW / zoom} canvasH={canvasPxH / zoom} />
           {/* Grid */}
           {showGrid && <GridLines width={canvasPxW / zoom} height={canvasPxH / zoom}
             bleed={bleedPx / zoom} step={mmToPx(5)} />}
@@ -182,15 +181,15 @@ export default function EditorCanvas() {
           <Transformer ref={transformerRef} rotateEnabled={true}
             enabledAnchors={['top-left', 'top-center', 'top-right', 'middle-left', 'middle-right', 'bottom-left', 'bottom-center', 'bottom-right']}
             boundBoxFunc={(oldBox, newBox) => newBox.width < 5 || newBox.height < 5 ? oldBox : newBox} />
+          {/* Sticker shape overlay */}
+          <StickerShapeOverlay
+            bleedPx={bleedPx / zoom} safeW={mmToPx(canvasSize.width)} safeH={mmToPx(canvasSize.height)} />
         </Layer>
 
-        {/* Layer 2 - Bleed guide on top (red dashed line only, excluded from export) */}
+        {/* Layer 2 - Bleed guide on top (red dashed line, shape-aware) */}
         {showBleed && (
           <Layer name="bleed">
-            <Rect x={bleedPx / zoom} y={bleedPx / zoom}
-              width={mmToPx(canvasSize.width)} height={mmToPx(canvasSize.height)}
-              fill="transparent" stroke="#ef4444" strokeWidth={1.5} dash={[4, 4]}
-              listening={false} />
+            <StickerBleedLine bleedPx={bleedPx / zoom} safeW={mmToPx(canvasSize.width)} safeH={mmToPx(canvasSize.height)} />
           </Layer>
         )}
       </Stage>
@@ -211,6 +210,124 @@ export default function EditorCanvas() {
       )}
     </div>
   )
+}
+
+// Shared shape renderer for stickers
+function useStickerConfig() {
+  const [cfg, setCfg] = useState<any>(null)
+  useEffect(() => {
+    const check = () => { const c = (window as any).__stickerConfig; if (c?.shape !== 'none') setCfg({...c}); else setCfg(null) }
+    check(); const i = setInterval(check, 500); return () => clearInterval(i)
+  }, [])
+  return cfg
+}
+
+function renderStickerShape(cfg: any, bleedPx: number, safeW: number, safeH: number,
+  fill: string, stroke: string | undefined, sw: number, dash?: number[], scale: number = 1) {
+  const pad = STICKER_SHAPE_PAD
+  const baseW = safeW - pad * 2
+  const baseH = safeH - pad * 2
+  const w = baseW * scale, h = baseH * scale
+  const r = Math.min(w, h) / 2
+  // Center in safe area
+  const cx = bleedPx + safeW / 2
+  const cy = bleedPx + safeH / 2
+  const listen = { listening: false }
+  const p = cfg.shapeParam || 1
+  const maxExt = Math.min(safeW / 2, safeH / 2) - STICKER_SHAPE_PAD // never exceed canvas
+  const s = { fill, stroke, strokeWidth: sw, dash: dash || [], ...listen }
+  switch (cfg.shape) {
+    case 'square': {
+      const sz = Math.min(r * 2, maxExt * 2)
+      return <Rect {...s} x={cx - sz/2} y={cy - sz/2} width={sz} height={sz} cornerRadius={Math.min(sz/2, sz * p * 0.3)} />
+    }
+    case 'rounded': {
+      const sz = Math.min(r * 2, maxExt * 2)
+      return <Rect {...s} x={cx - sz/2} y={cy - sz/2} width={sz} height={sz} cornerRadius={Math.min(sz/2, sz * p * 0.5)} />
+    }
+    case 'circle': {
+      const rw = Math.min(r * p, maxExt)
+      const rh = Math.min(r / p, maxExt)
+      const cr = Math.min(rw, rh)
+      return <Rect {...s} x={cx - rw} y={cy - rh} width={rw * 2} height={rh * 2} cornerRadius={cr} />
+    }
+    case 'diamond': {
+      const dw = Math.min(r * 0.85 * p, maxExt)
+      const dh = Math.min(r * 0.85 / p, maxExt)
+      return <Line {...s} points={[cx, cy - dh, cx + dw, cy, cx, cy + dh, cx - dw, cy]} closed={true} />
+    }
+    case 'triangle': {
+      const th = Math.min(r * 0.85 * p, maxExt)
+      const tw = Math.min(r * 0.85, maxExt)
+      return <Line {...s} points={[cx, cy - th, cx + tw, cy + th * 0.5, cx - tw, cy + th * 0.5]} closed={true} />
+    }
+    case 'heart': {
+      const scale = Math.min(r * 1.3, maxExt) / 16
+      const xMul = Math.min(p, maxExt / (16 * scale))
+      return <Shape {...s} sceneFunc={(ctx: any, shape: any) => {
+        ctx.beginPath()
+        const steps = 200
+        for (let i = 0; i <= steps; i++) {
+          const t = (i / steps) * Math.PI * 2
+          const x = 16 * Math.pow(Math.sin(t), 3) * xMul
+          const y = (13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t))
+          const px = cx + x * scale
+          const py = cy - y * scale
+          i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py)
+        }
+        ctx.closePath()
+        ctx.fillStrokeShape(shape)
+      }} />
+    }
+    case 'star': {
+      // 5-point star with adjustable inner radius (sharpness)
+      const or2 = Math.min(r, maxExt * 0.95)
+      const ir2 = or2 * (0.2 + p * 0.4) // p low=sharp, p high=blunt
+      const pts2: number[] = []
+      for (let i = 0; i < 5; i++) {
+        const oa = (i * 2 * Math.PI) / 5 - Math.PI / 2
+        const ia = oa + Math.PI / 5
+        pts2.push(cx + or2 * Math.cos(oa), cy + or2 * Math.sin(oa))
+        pts2.push(cx + ir2 * Math.cos(ia), cy + ir2 * Math.sin(ia))
+      }
+      return <Line {...s} points={pts2} closed={true} />
+    }
+    default: return null
+  }
+}
+
+// Pad used in renderStickerShape for main shape
+const STICKER_SHAPE_PAD = 12
+
+function StickerBackground({ backgroundColor, canvasW, canvasH }: any) {
+  const cfg = useStickerConfig()
+  // No background Rect when sticker shape is active - canvas is naturally transparent
+  if (cfg) return null
+  return <Rect x={0} y={0} width={canvasW} height={canvasH} fill={backgroundColor} listening={false} />
+}
+
+function StickerBleedLine({ bleedPx, safeW, safeH }: any) {
+  const cfg = useStickerConfig()
+  if (cfg) {
+    const scale = safeW / (safeW - STICKER_SHAPE_PAD * 2)
+    return (
+      <>
+        {/* Bleed fill (shape color, excluded from export) */}
+        {renderStickerShape(cfg, bleedPx, safeW, safeH, cfg.shapeColor || '#ffffff', undefined, 0, [], scale)}
+        {/* Red dashed line (excluded from export) */}
+        {renderStickerShape(cfg, bleedPx, safeW, safeH, 'transparent', '#ef4444', 1.5, [4, 4], scale)}
+      </>
+    )
+  }
+  return <Rect x={bleedPx} y={bleedPx} width={safeW} height={safeH}
+    fill="transparent" stroke="#ef4444" strokeWidth={1.5} dash={[4, 4]} listening={false} />
+}
+
+function StickerShapeOverlay({ bleedPx, safeW, safeH }: any) {
+  const cfg = useStickerConfig()
+  if (!cfg) return null
+  return renderStickerShape(cfg, bleedPx, safeW, safeH,
+    cfg.shapeColor || '#ffffff', cfg.strokeWidth > 0 ? cfg.strokeColor : 'transparent', cfg.strokeWidth || 0)
 }
 
 function LiveText({ layer, isEditing }: { layer: any; isEditing: boolean }) {
