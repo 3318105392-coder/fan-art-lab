@@ -21,6 +21,7 @@ export type EditorAction =
   | { type: 'SET_ZOOM'; zoom: number }
   | { type: 'MOVE_LAYER_UP'; id: string }
   | { type: 'MOVE_LAYER_DOWN'; id: string }
+  | { type: 'MOVE_LAYER_TO'; id: string; index: number }
   | { type: 'TOGGLE_LAYER_VISIBLE'; id: string }
   | { type: 'TOGGLE_LAYER_LOCKED'; id: string }
   | { type: 'TOGGLE_BLEED' }
@@ -71,6 +72,15 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
       if (idx <= 0) return state
       const newLayers = [...state.layers]
       ;[newLayers[idx], newLayers[idx - 1]] = [newLayers[idx - 1], newLayers[idx]]
+      return { ...state, layers: newLayers }
+    }
+
+    case 'MOVE_LAYER_TO': {
+      const fromIdx = state.layers.findIndex(l => l.id === action.id)
+      if (fromIdx === -1 || fromIdx === action.index) return state
+      const newLayers = [...state.layers]
+      const [moved] = newLayers.splice(fromIdx, 1)
+      newLayers.splice(action.index, 0, moved)
       return { ...state, layers: newLayers }
     }
 

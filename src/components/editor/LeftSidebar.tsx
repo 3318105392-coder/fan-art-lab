@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useEditor } from '../../store/editorStore'
 import { FONT_OPTIONS, FONT_WEIGHTS, BG_COLORS } from '../../types'
@@ -247,7 +247,7 @@ function StickerTab() {
       width: 40, height: 40,
       rotation: 0, scaleX: 1, scaleY: 1,
       visible: true, locked: false, name,
-      text: emoji, fontSize: 36, fontFamily: 'sans-serif', fontWeight: 400,
+      text: emoji, fontSize: 36, fontFamily: 'sans-serif', fontWeight: 400, fontStyle: 'normal',
       fill: '#000000', stroke: '', strokeWidth: 0,
       align: 'center', opacity: 1,
     }})
@@ -313,8 +313,24 @@ function TextTab() {
   const isTextSelected = selectedLayer?.type === 'text'
   const textLayer = isTextSelected ? selectedLayer as TextLayer : null
 
+  const origFontRef = useRef<string | null>(null)
+
   const updateText = (changes: Partial<TextLayer>) => {
     if (state.selectedLayerId) dispatch({ type: 'UPDATE_LAYER', id: state.selectedLayerId, changes })
+  }
+
+  const previewFont = (family: string) => {
+    if (!origFontRef.current) origFontRef.current = textLayer!.fontFamily
+    updateText({ fontFamily: family })
+  }
+
+  const restoreFont = () => {
+    if (origFontRef.current) { updateText({ fontFamily: origFontRef.current }); origFontRef.current = null }
+  }
+
+  const lockFont = (family: string) => {
+    origFontRef.current = null
+    updateText({ fontFamily: family })
   }
 
   const handleAddText = () => {
@@ -322,12 +338,12 @@ function TextTab() {
     const name = dedupName('文字', layers.map(l => l.name))
     dispatch({ type: 'ADD_LAYER', layer: {
       id: generateId(), type: 'text', text: '双击编辑文字',
-      x: mmToPx(canvasSize.width / 2 + canvasSize.bleed) - 60,
+      x: mmToPx(canvasSize.width / 2 + canvasSize.bleed) - 100,
       y: mmToPx(canvasSize.height * 0.65 + canvasSize.bleed),
-      width: 120, height: 40,
+      width: 200, height: 40,
       rotation: 0, scaleX: 1, scaleY: 1,
       visible: true, locked: false, name,
-      fontSize: 18, fontFamily: 'Noto Sans SC', fontWeight: 400,
+      fontSize: 18, fontFamily: 'Noto Sans SC', fontWeight: 400, fontStyle: 'normal',
       fill: '#1e1b4b', stroke: '', strokeWidth: 0,
       align: 'center', shadow: undefined, opacity: 1,
     }})
@@ -349,26 +365,38 @@ function TextTab() {
     <div className="space-y-5">
       <div>
         <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">字体</h4>
-        <select value={textLayer!.fontFamily}
-          onChange={e => updateText({ fontFamily: e.target.value })}
-          className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white
-            focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 outline-none">
+        <div className="px-3 py-1.5 mb-1 rounded-lg bg-indigo-50 text-xs text-indigo-600 font-medium">
+          当前：{FONT_OPTIONS.find(f => f.family === textLayer!.fontFamily)?.label || textLayer!.fontFamily}
+        </div>
+        <div className="max-h-40 overflow-y-auto rounded-lg border border-gray-200 bg-white divide-y divide-gray-50">
           {FONT_OPTIONS.map(f => (
-            <option key={f.family} value={f.family} style={{ fontFamily: f.family }}>{f.label}</option>
+            <button key={f.family}
+              onClick={() => lockFont(f.family)}
+              onMouseEnter={() => previewFont(f.family)}
+              onMouseLeave={restoreFont}
+              className={`w-full text-left px-3 py-2 text-sm transition-colors hover:bg-indigo-50
+                ${textLayer!.fontFamily === f.family ? 'bg-indigo-100 text-indigo-600 font-medium' : 'text-gray-600'}`}
+              style={{ fontFamily: f.family }}>
+              {f.label}
+            </button>
           ))}
-        </select>
-        <p className="mt-2 text-base text-gray-500 truncate" style={{ fontFamily: textLayer!.fontFamily }}>
-          字体预览 ABC 中文</p>
+        </div>
       </div>
       <div>
-        <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">粗细</h4>
-        <div className="grid grid-cols-3 gap-1.5">
-          {FONT_WEIGHTS.map(fw => (
-            <button key={fw.value} onClick={() => updateText({ fontWeight: fw.value })}
-              className={`px-2 py-1.5 rounded-lg text-xs border transition-all
-                ${textLayer!.fontWeight === fw.value ? 'border-indigo-400 bg-indigo-50 text-indigo-600' : 'border-gray-150 bg-white text-gray-500 hover:border-gray-300'}`}
-              style={{ fontWeight: fw.value }}>{fw.label}</button>
-          ))}
+        <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">粗细 & 斜体</h4>
+        <div className="flex gap-2">
+          <div className="grid grid-cols-3 gap-1.5 flex-1">
+            {FONT_WEIGHTS.map(fw => (
+              <button key={fw.value} onClick={() => updateText({ fontWeight: fw.value })}
+                className={`px-2 py-1.5 rounded-lg text-xs border transition-all
+                  ${textLayer!.fontWeight === fw.value ? 'border-indigo-400 bg-indigo-50 text-indigo-600' : 'border-gray-150 bg-white text-gray-500 hover:border-gray-300'}`}
+                style={{ fontWeight: fw.value }}>{fw.label}</button>
+            ))}
+          </div>
+          <button onClick={() => updateText({ fontStyle: textLayer!.fontStyle === 'italic' ? 'normal' : 'italic' })}
+            className={`px-3 py-1.5 rounded-lg text-xs border transition-all
+              ${textLayer!.fontStyle === 'italic' ? 'border-indigo-400 bg-indigo-50 text-indigo-600' : 'border-gray-150 bg-white text-gray-500 hover:border-gray-300'}`}
+            style={{ fontStyle: 'italic' }}>斜体</button>
         </div>
       </div>
       <div>
@@ -386,12 +414,6 @@ function TextTab() {
             className="w-10 h-10 rounded-lg cursor-pointer border-0 p-0" />
           <span className="text-xs text-gray-400">{textLayer!.fill}</span>
         </div>
-      </div>
-      <div>
-        <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">文字内容</h4>
-        <textarea value={textLayer!.text} onChange={e => updateText({ text: e.target.value })}
-          className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm resize-none
-            focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 outline-none" rows={2} />
       </div>
       <div>
         <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">对齐</h4>

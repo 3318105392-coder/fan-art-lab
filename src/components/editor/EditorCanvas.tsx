@@ -42,6 +42,19 @@ export default function EditorCanvas() {
   const canvasPxH = mmToPx(totalH) * zoom
   const bleedPx = mmToPx(canvasSize.bleed) * zoom
 
+  // Delete key to remove selected layer
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        const el = e.target as HTMLElement
+        if (el.tagName === 'TEXTAREA' || el.tagName === 'INPUT') return
+        if (selectedLayerId) dispatch({ type: 'REMOVE_LAYER', id: selectedLayerId })
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [selectedLayerId, dispatch])
+
   // Immediate close on click outside (using capture + ref for zero delay)
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -159,6 +172,7 @@ export default function EditorCanvas() {
           {layers.filter(l => l.visible).map(layer => (
             <CanvasLayerItem key={layer.id} layer={layer}
               isSelected={selectedLayerId === layer.id}
+              isEditing={editingTextId === layer.id}
               onDragEnd={(e) => handleDragEnd(layer.id, e)}
               onTransformEnd={(node) => handleTransformEnd(layer.id, node)}
               onSelect={() => dispatch({ type: 'SELECT_LAYER', id: layer.id })}
@@ -199,8 +213,26 @@ export default function EditorCanvas() {
   )
 }
 
-function CanvasLayerItem({ layer, onDragEnd, onTransformEnd, onSelect, onDblClick }: {
-  layer: LayerType; isSelected: boolean
+function LiveText({ layer, isEditing }: { layer: any; isEditing: boolean }) {
+  const textRef = useRef<any>(null)
+  useEffect(() => {
+    if (textRef.current) {
+      textRef.current.cache()
+      textRef.current.getLayer()?.batchDraw()
+    }
+  }, [layer.fontFamily, layer.fontWeight, layer.fontStyle, layer.fontSize, layer.text, layer.fill])
+  const fw = layer.fontWeight
+  const fs = layer.fontStyle === 'italic' ? (fw >= 600 ? 'italic bold' : 'italic') : (fw >= 600 ? 'bold' : 'normal')
+  return <Text ref={textRef} text={layer.text} fontSize={layer.fontSize}
+    fontFamily={layer.fontFamily} fontStyle={fs}
+    fill={layer.fill} stroke={layer.stroke} strokeWidth={layer.strokeWidth} align={layer.align}
+    width={layer.width} shadowColor={layer.shadow?.color} shadowBlur={layer.shadow?.blur}
+    shadowOffsetX={layer.shadow?.offsetX} shadowOffsetY={layer.shadow?.offsetY}
+    opacity={isEditing ? 0 : layer.opacity} />
+}
+
+function CanvasLayerItem({ layer, isEditing, onDragEnd, onTransformEnd, onSelect, onDblClick }: {
+  layer: LayerType; isSelected: boolean; isEditing: boolean
   onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => void
   onTransformEnd: (node: Konva.Group) => void
   onSelect: () => void; onDblClick: () => void
@@ -219,12 +251,7 @@ function CanvasLayerItem({ layer, onDragEnd, onTransformEnd, onSelect, onDblClic
     case 'image':
       return <Group {...groupProps}><KonvaImage image={image} width={layer.width} height={layer.height} cornerRadius={2} /></Group>
     case 'text':
-      return <Group {...groupProps}><Text text={layer.text} fontSize={layer.fontSize}
-        fontFamily={layer.fontFamily}
-        fontStyle={layer.fontWeight >= 600 ? 'bold' : 'normal'}
-        fill={layer.fill} stroke={layer.stroke} strokeWidth={layer.strokeWidth} align={layer.align}
-        width={layer.width} shadowColor={layer.shadow?.color} shadowBlur={layer.shadow?.blur}
-        shadowOffsetX={layer.shadow?.offsetX} shadowOffsetY={layer.shadow?.offsetY} opacity={layer.opacity} /></Group>
+      return <Group {...groupProps}><LiveText layer={layer} isEditing={isEditing} /></Group>
     case 'sticker':
       return <Group {...groupProps}><KonvaImage image={image} width={layer.width} height={layer.height} /></Group>
     case 'shape':

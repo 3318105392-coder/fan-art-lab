@@ -80,12 +80,12 @@ export default function PhotocardEditor() {
   const handleAddText = useCallback(() => {
     dispatch({ type: 'ADD_LAYER', layer: {
       id: generateId(), type: 'text', text: '双击编辑文字',
-      x: mmToPx(DEFAULT_PHOTOCARD_SIZE.width / 2 + DEFAULT_PHOTOCARD_SIZE.bleed) - 60,
+      x: mmToPx(DEFAULT_PHOTOCARD_SIZE.width / 2 + DEFAULT_PHOTOCARD_SIZE.bleed) - 100,
       y: mmToPx(DEFAULT_PHOTOCARD_SIZE.height * 0.7 + DEFAULT_PHOTOCARD_SIZE.bleed),
-      width: 120, height: 40,
+      width: 200, height: 40,
       rotation: 0, scaleX: 1, scaleY: 1, visible: true, locked: false,
       name: dedupName('文字', state.layers.map(l => l.name)),
-      fontSize: 18, fontFamily: 'Noto Sans SC', fontWeight: 400,
+      fontSize: 18, fontFamily: 'Noto Sans SC', fontWeight: 400, fontStyle: 'normal',
       fill: '#1e1b4b', stroke: '', strokeWidth: 0, align: 'center', shadow: undefined, opacity: 1,
     }})
   }, [dispatch, state.layers])

@@ -70,12 +70,12 @@ export default function PolaroidEditor() {
   const handleAddText = useCallback(() => {
     dispatch({ type: 'ADD_LAYER', layer: {
       id: generateId(), type: 'text', text: '双击编辑',
-      x: mmToPx(POLAROID_SIZE.width / 2 + POLAROID_SIZE.bleed) - 50,
+      x: mmToPx(POLAROID_SIZE.width / 2 + POLAROID_SIZE.bleed) - 100,
       y: mmToPx(POLAROID_SIZE.height * 0.78 + POLAROID_SIZE.bleed),
-      width: 100, height: 35,
+      width: 200, height: 40,
       rotation: 0, scaleX: 1, scaleY: 1, visible: true, locked: false,
       name: dedupName('文字', state.layers.map(l => l.name)),
-      fontSize: 14, fontFamily: 'Noto Sans SC', fontWeight: 400,
+      fontSize: 14, fontFamily: 'Noto Sans SC', fontWeight: 400, fontStyle: 'normal',
       fill: '#374151', stroke: '', strokeWidth: 0, align: 'center', shadow: undefined, opacity: 1,
     }})
   }, [dispatch, state.layers])

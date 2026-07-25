@@ -67,6 +67,19 @@ export default function PolaroidCanvas() {
   const bottomY = photoY + photoH
 
   // Immediate close on click outside text editing
+  // Delete key to remove selected layer
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        const el = e.target as HTMLElement
+        if (el.tagName === 'TEXTAREA' || el.tagName === 'INPUT') return
+        if (selectedLayerId) dispatch({ type: 'REMOVE_LAYER', id: selectedLayerId })
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [selectedLayerId, dispatch])
+
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if ((e.target as HTMLElement).tagName === 'TEXTAREA') return
@@ -195,6 +208,7 @@ export default function PolaroidCanvas() {
                   items.push(
                     <PolaroidLayerItem key={layer.id} layer={layer}
                       isSelected={selectedLayerId === layer.id}
+                      isEditing={editingTextId === layer.id}
                       onDragEnd={(e) => handleDragEnd(layer.id, e)}
                       onTransformEnd={(node) => handleTransformEnd(layer.id, node)}
                       onSelect={() => dispatch({ type: 'SELECT_LAYER', id: layer.id })}
@@ -263,8 +277,24 @@ function PolaroidFrameRender({ frame, hasTemplate, canvasW, photoX, photoY, phot
   )
 }
 
-function PolaroidLayerItem({ layer, onDragEnd, onTransformEnd, onSelect, onDblClick }: {
-  layer: LayerType; isSelected: boolean
+function LiveText({ layer, isEditing }: { layer: any; isEditing: boolean }) {
+  const textRef = useRef<any>(null)
+  useEffect(() => {
+    if (textRef.current) {
+      textRef.current.cache()
+      textRef.current.getLayer()?.batchDraw()
+    }
+  }, [layer.fontFamily, layer.fontWeight, layer.fontStyle, layer.fontSize, layer.text, layer.fill])
+  const fw = layer.fontWeight
+  const fs = layer.fontStyle === 'italic' ? (fw >= 600 ? 'italic bold' : 'italic') : (fw >= 600 ? 'bold' : 'normal')
+  return <Text ref={textRef} text={layer.text} fontSize={layer.fontSize}
+    fontFamily={layer.fontFamily} fontStyle={fs}
+    fill={layer.fill} stroke={layer.stroke} strokeWidth={layer.strokeWidth} align={layer.align}
+    width={layer.width} opacity={isEditing ? 0 : layer.opacity} />
+}
+
+function PolaroidLayerItem({ layer, isEditing, onDragEnd, onTransformEnd, onSelect, onDblClick }: {
+  layer: LayerType; isSelected: boolean; isEditing: boolean
   onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => void
   onTransformEnd: (node: Konva.Group) => void
   onSelect: () => void; onDblClick: () => void
@@ -273,7 +303,7 @@ function PolaroidLayerItem({ layer, onDragEnd, onTransformEnd, onSelect, onDblCl
   const gp = { id: `layer-${layer.id}`, x: layer.x, y: layer.y, width: layer.width, height: layer.height, rotation: layer.rotation, draggable: !layer.locked, onClick: onSelect, onTap: onSelect, onDblClick, onDragEnd, onTransformEnd: (e: Konva.KonvaEventObject<Event>) => onTransformEnd(e.target as Konva.Group) }
   switch (layer.type) {
     case 'image': return <Group {...gp}><KonvaImage image={image} width={layer.width} height={layer.height} cornerRadius={2} /></Group>
-    case 'text': return <Group {...gp}><Text text={layer.text} fontSize={layer.fontSize} fontFamily={layer.fontFamily} fontStyle={layer.fontWeight >= 600 ? 'bold' : 'normal'} fill={layer.fill} stroke={layer.stroke} strokeWidth={layer.strokeWidth} align={layer.align} width={layer.width} opacity={layer.opacity} /></Group>
+    case 'text': return <Group {...gp}><LiveText layer={layer} isEditing={isEditing} /></Group>
     case 'sticker': return <Group {...gp}><KonvaImage image={image} width={layer.width} height={layer.height} /></Group>
     default: return null
   }

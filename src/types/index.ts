@@ -28,6 +28,7 @@ export interface TextLayer extends BaseLayer {
   fontSize: number
   fontFamily: string
   fontWeight: number
+  fontStyle: 'normal' | 'italic'
   fill: string
   stroke: string
   strokeWidth: number
@@ -108,12 +109,9 @@ export const FONT_OPTIONS: FontOption[] = [
 ]
 
 export const FONT_WEIGHTS = [
-  { value: 300, label: '细体' },
+  { value: 100, label: '细体' },
   { value: 400, label: '常规' },
-  { value: 500, label: '中等' },
-  { value: 600, label: '半粗' },
   { value: 700, label: '粗体' },
-  { value: 900, label: '特粗' },
 ] as const
 
 // Background color presets
