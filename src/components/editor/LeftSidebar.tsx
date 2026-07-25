@@ -5,19 +5,17 @@ import { FONT_OPTIONS, FONT_WEIGHTS, BG_COLORS } from '../../types'
 import type { TextLayer } from '../../types'
 import { generateId, mmToPx, dedupName } from '../../utils'
 
-type Tab = 'preview' | 'template' | 'sticker' | 'text'
+type Tab = 'preview' | 'template' | 'sticker' | 'text' | 'shape'
 
 export default function LeftSidebar() {
   const location = useLocation()
   const isPolaroid = location.pathname.includes('polaroid')
-  const [activeTab, setActiveTab] = useState<Tab>(isPolaroid ? 'template' : 'preview')
+  const isSticker = location.pathname.includes('sticker')
+  const [activeTab, setActiveTab] = useState<Tab>(isSticker ? 'shape' : isPolaroid ? 'template' : 'preview')
 
-  const tabs: { key: Tab; label: string }[] = [
-    { key: 'preview', label: '效果图' },
-    { key: 'template', label: '模版' },
-    { key: 'sticker', label: '贴纸素材' },
-    { key: 'text', label: '文字' },
-  ]
+  const tabs: { key: Tab; label: string }[] = isSticker
+    ? [{ key: 'shape' as Tab, label: '形状' }, { key: 'sticker' as Tab, label: '贴纸素材' }, { key: 'text' as Tab, label: '文字' }]
+    : [{ key: 'preview' as Tab, label: '效果图' }, { key: 'template' as Tab, label: '模版' }, { key: 'sticker' as Tab, label: '贴纸素材' }, { key: 'text' as Tab, label: '文字' }]
 
   return (
     <div className="w-64 bg-white border-r border-gray-200 flex flex-col h-full">
@@ -35,6 +33,7 @@ export default function LeftSidebar() {
       <div className="flex-1 overflow-y-auto p-4">
         {activeTab === 'preview' && <PreviewTab />}
         {activeTab === 'template' && <TemplateTab />}
+        {activeTab === 'shape' && <ShapeTab />}
         {activeTab === 'sticker' && <StickerTab />}
         {activeTab === 'text' && <TextTab />}
       </div>
@@ -197,6 +196,99 @@ function TemplateTab() {
               onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
           </button>
         ))}
+      </div>
+    </div>
+  )
+}
+
+/* ====== 形状 Tab ====== */
+const SHAPES = [
+  { key: 'none', label: '无', icon: '⊘' },
+  { key: 'square', label: '方形', icon: '□' },
+  { key: 'rounded', label: '圆角', icon: '▢' },
+  { key: 'circle', label: '圆形', icon: '○' },
+  { key: 'heart', label: '爱心', icon: '♡' },
+  { key: 'star', label: '星形', icon: '☆' },
+  { key: 'diamond', label: '菱形', icon: '◇' },
+  { key: 'triangle', label: '三角', icon: '△' },
+] as const
+
+function getStickerCfg() {
+  return (window as any).__stickerConfig || { shape: 'none', shapeColor: '#ffffff', strokeWidth: 0, strokeColor: 'transparent', shapeParam: 1 }
+}
+
+function updateStickerCfg(part: any) {
+  const cfg = { ...getStickerCfg(), ...part }
+  ;(window as any).__stickerConfig = cfg
+}
+
+function ShapeTab() {
+  const { dispatch } = useEditor()
+  const [cfg, setCfg] = useState(getStickerCfg())
+  const update = (part: any) => { const c = { ...cfg, ...part }; setCfg(c); updateStickerCfg(part); dispatch({ type: 'SET_BACKGROUND_COLOR', color: 'transparent' }) }
+
+  useEffect(() => {
+    const i = setInterval(() => setCfg(getStickerCfg()), 300)
+    return () => clearInterval(i)
+  }, [])
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">选择形状</h4>
+        <div className="grid grid-cols-4 gap-2">
+          {SHAPES.map(s => (
+            <button key={s.key} onClick={() => update({ shape: s.key })} className={`py-2 rounded-lg text-xs border transition-all flex flex-col items-center gap-1
+              ${cfg.shape === s.key ? 'border-indigo-400 bg-indigo-50 text-indigo-600' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>
+              <span className="text-lg">{s.icon}</span>{s.label}</button>
+          ))}
+        </div>
+      </div>
+
+      {cfg.shape !== 'none' && (
+        <>
+          <div>
+            <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+              {cfg.shape === 'circle' ? '椭圆度' : cfg.shape === 'diamond' ? '长宽比' : cfg.shape === 'heart' ? '饱满度' : cfg.shape === 'star' ? '尖锐度' : cfg.shape === 'triangle' ? '高度' : '圆角'}
+            </h4>
+            <input type="range" min={0.5} max={2} step={0.1} value={cfg.shapeParam}
+              onChange={e => update({ shapeParam: Number(e.target.value) })} className="w-full accent-indigo-500" />
+          </div>
+          <div>
+            <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">背景颜色</h4>
+            <div className="grid grid-cols-7 gap-1.5 mb-2">
+              {BG_COLORS.map(color => (
+                <button key={color} onClick={() => update({ shapeColor: color })} className={`w-7 h-7 rounded-lg border-2 transition-all hover:scale-110 relative overflow-hidden
+                  ${cfg.shapeColor === color ? 'border-indigo-500 ring-2 ring-indigo-200' : 'border-gray-200'}`}
+                  style={color === 'transparent' ? { background: 'white' } : { backgroundColor: color }}>
+                  {color === 'transparent' && <span className="absolute inset-0 flex items-center justify-center"><span className="w-full h-0.5 bg-red-400 rotate-45 absolute" /></span>}
+                </button>
+              ))}
+            </div>
+            <input type="color" value={cfg.shapeColor} onChange={e => update({ shapeColor: e.target.value })} className="w-8 h-8 rounded cursor-pointer border-0 p-0" />
+          </div>
+        </>
+      )}
+
+      <div>
+        <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">描边: {cfg.strokeWidth}px</h4>
+        <div className="flex items-center gap-1">
+          <button onClick={() => update({ strokeWidth: Math.max(0, cfg.strokeWidth - 1) })} className="w-6 h-6 rounded bg-gray-100 text-xs">−</button>
+          <input type="range" min={0} max={20} value={cfg.strokeWidth}
+            onChange={e => update({ strokeWidth: Number(e.target.value) })} className="flex-1 accent-indigo-500" />
+          <button onClick={() => update({ strokeWidth: Math.min(20, cfg.strokeWidth + 1) })} className="w-6 h-6 rounded bg-gray-100 text-xs">+</button>
+        </div>
+      </div>
+      <div>
+        <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">描边颜色</h4>
+        <div className="grid grid-cols-7 gap-1.5 mb-2">
+          {['transparent','#000','#fff','#ef4444','#f59e0b','#10b981','#3b82f6','#8b5cf6','#ec4899','#f472b6','#6366f1','#0ea5e9','#84cc16','#6b7280'].map(color => (
+            <button key={color} onClick={() => update({ strokeColor: color })} className={`w-7 h-7 rounded-lg border-2 transition-all hover:scale-110 overflow-hidden
+              ${cfg.strokeColor === color ? 'border-indigo-500 ring-2 ring-indigo-200' : 'border-gray-200'}`}
+              style={color === 'transparent' ? { background: 'white' } : { backgroundColor: color }} />
+          ))}
+        </div>
+        <input type="color" value={cfg.strokeColor} onChange={e => update({ strokeColor: e.target.value })} className="w-8 h-8 rounded cursor-pointer border-0 p-0" />
       </div>
     </div>
   )

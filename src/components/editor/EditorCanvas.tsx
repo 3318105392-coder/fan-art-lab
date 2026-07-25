@@ -167,23 +167,26 @@ export default function EditorCanvas() {
           {/* Grid */}
           {showGrid && <GridLines width={canvasPxW / zoom} height={canvasPxH / zoom}
             bleed={bleedPx / zoom} step={mmToPx(5)} />}
-          {/* Layers */}
-          {layers.filter(l => l.visible).map(layer => (
-            <CanvasLayerItem key={layer.id} layer={layer}
-              isSelected={selectedLayerId === layer.id}
-              isEditing={editingTextId === layer.id}
-              onDragEnd={(e) => handleDragEnd(layer.id, e)}
-              onTransformEnd={(node) => handleTransformEnd(layer.id, node)}
-              onSelect={() => dispatch({ type: 'SELECT_LAYER', id: layer.id })}
-              onDblClick={() => handleTextDblClick(layer)}
-            />
-          ))}
-          <Transformer ref={transformerRef} rotateEnabled={true}
-            enabledAnchors={['top-left', 'top-center', 'top-right', 'middle-left', 'middle-right', 'bottom-left', 'bottom-center', 'bottom-right']}
-            boundBoxFunc={(oldBox, newBox) => newBox.width < 5 || newBox.height < 5 ? oldBox : newBox} />
-          {/* Sticker shape overlay */}
+          {/* Sticker shape (bottom layer, behind everything) */}
           <StickerShapeOverlay
             bleedPx={bleedPx / zoom} safeW={mmToPx(canvasSize.width)} safeH={mmToPx(canvasSize.height)} />
+          {/* Layers clipped to shape */}
+          <StickerClip bleedPx={bleedPx / zoom} safeW={mmToPx(canvasSize.width)} safeH={mmToPx(canvasSize.height)}>
+            {layers.filter(l => l.visible).map(layer => (
+              <CanvasLayerItem key={layer.id} layer={layer}
+                isSelected={selectedLayerId === layer.id}
+                isEditing={editingTextId === layer.id}
+                onDragEnd={(e) => handleDragEnd(layer.id, e)}
+                onTransformEnd={(node) => handleTransformEnd(layer.id, node)}
+                onSelect={() => dispatch({ type: 'SELECT_LAYER', id: layer.id })}
+                onDblClick={() => handleTextDblClick(layer)}
+              />
+            ))}
+            <Transformer ref={transformerRef} rotateEnabled={true}
+              enabledAnchors={['top-left', 'top-center', 'top-right', 'middle-left', 'middle-right', 'bottom-left', 'bottom-center', 'bottom-right']}
+              boundBoxFunc={(oldBox, newBox) => newBox.width < 5 || newBox.height < 5 ? oldBox : newBox} />
+          </StickerClip>
+          {/* Sticker shape overlay */}
         </Layer>
 
         {/* Layer 2 - Bleed guide on top (red dashed line, shape-aware) */}
@@ -299,6 +302,29 @@ function renderStickerShape(cfg: any, bleedPx: number, safeW: number, safeH: num
 // Pad used in renderStickerShape for main shape
 const STICKER_SHAPE_PAD = 12
 
+function StickerClip({ bleedPx, safeW, safeH, children }: any) {
+  const clipFunc = (ctx: any) => {
+    const cfg = (window as any).__stickerConfig
+    if (!cfg || cfg.shape === 'none') return
+    const pad = 12, p = cfg.shapeParam || 1
+    const x = bleedPx + pad, y = bleedPx + pad
+    const w = safeW - pad * 2, h = safeH - pad * 2
+    const r = Math.min(w, h) / 2
+    const cx = x + w / 2, cy = y + h / 2
+    ctx.beginPath()
+    switch (cfg.shape) {
+      case 'square': ctx.rect(cx - r, cy - r, r * 2, r * 2); break
+      case 'rounded': case 'circle': { const rr = Math.min(r, cfg.shape==='circle'?Math.min(r*p,r/p):r); ctx.arc(cx, cy, rr, 0, Math.PI*2); break }
+      case 'diamond': { const dw=Math.min(r*0.85*p,(safeW/2-pad)),dh=Math.min(r*0.85/p,(safeH/2-pad)); ctx.moveTo(cx,cy-dh);ctx.lineTo(cx+dw,cy);ctx.lineTo(cx,cy+dh);ctx.lineTo(cx-dw,cy);ctx.closePath(); break }
+      case 'triangle': { const th=Math.min(r*0.85*p,(safeH/2-pad)),tw=Math.min(r*0.85,(safeW/2-pad)); ctx.moveTo(cx,cy-th);ctx.lineTo(cx+tw,cy+th*0.5);ctx.lineTo(cx-tw,cy+th*0.5);ctx.closePath(); break }
+      case 'heart': { const hs=Math.min(r*1.3,(safeW/2-pad))/16; for(let i=0;i<=100;i++){const t=(i/100)*Math.PI*2; const hx=cx+16*Math.pow(Math.sin(t),3)*Math.min(p,(safeW/2-pad)/(16*hs))*hs; const hy=cy-(13*Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t))*hs; i===0?ctx.moveTo(hx,hy):ctx.lineTo(hx,hy)}ctx.closePath(); break }
+      case 'star': { const or2=Math.min(r,(safeW/2-pad)),ir2=or2*(0.2+p*0.4); for(let i=0;i<5;i++){const oa=(i*2*Math.PI)/5-Math.PI/2,ia=oa+Math.PI/5; i===0?ctx.moveTo(cx+or2*Math.cos(oa),cy+or2*Math.sin(oa)):ctx.lineTo(cx+or2*Math.cos(oa),cy+or2*Math.sin(oa)); ctx.lineTo(cx+ir2*Math.cos(ia),cy+ir2*Math.sin(ia))}ctx.closePath(); break }
+    }
+    ctx.clip()
+  }
+  return <Group clipFunc={clipFunc}>{children}</Group>
+}
+
 function StickerBackground({ backgroundColor, canvasW, canvasH }: any) {
   const cfg = useStickerConfig()
   // No background Rect when sticker shape is active - canvas is naturally transparent
@@ -310,14 +336,7 @@ function StickerBleedLine({ bleedPx, safeW, safeH }: any) {
   const cfg = useStickerConfig()
   if (cfg) {
     const scale = safeW / (safeW - STICKER_SHAPE_PAD * 2)
-    return (
-      <>
-        {/* Bleed fill (shape color, excluded from export) */}
-        {renderStickerShape(cfg, bleedPx, safeW, safeH, cfg.shapeColor || '#ffffff', undefined, 0, [], scale)}
-        {/* Red dashed line (excluded from export) */}
-        {renderStickerShape(cfg, bleedPx, safeW, safeH, 'transparent', '#ef4444', 1.5, [4, 4], scale)}
-      </>
-    )
+    return renderStickerShape(cfg, bleedPx, safeW, safeH, 'transparent', '#ef4444', 1.5, [4, 4], scale)
   }
   return <Rect x={bleedPx} y={bleedPx} width={safeW} height={safeH}
     fill="transparent" stroke="#ef4444" strokeWidth={1.5} dash={[4, 4]} listening={false} />
