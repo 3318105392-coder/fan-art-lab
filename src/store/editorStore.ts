@@ -119,7 +119,7 @@ export function createInitialState(canvasSize: CanvasSize): EditorState {
     zoom: 1,
     showBleed: true,
     showGrid: false,
-    backgroundColor: 'transparent',
+    backgroundColor: '#ffffff',
   }
 }
 
