@@ -2,7 +2,7 @@ import { useReducer, useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { EditorContext, editorReducer, createInitialState } from '../../store/editorStore'
 import { DEFAULT_PHOTOCARD_SIZE } from '../../types'
-import { generateId, mmToPx } from '../../utils'
+import { generateId, mmToPx, dedupName } from '../../utils'
 import EditorCanvas from '../../components/editor/EditorCanvas'
 import LayerPanel from '../../components/editor/LayerPanel'
 import LeftSidebar from '../../components/editor/LeftSidebar'
@@ -46,7 +46,8 @@ export default function PhotocardEditor() {
           x: mmToPx(DEFAULT_PHOTOCARD_SIZE.width / 2 + DEFAULT_PHOTOCARD_SIZE.bleed) - (img.width * scale) / 2,
           y: mmToPx(DEFAULT_PHOTOCARD_SIZE.height / 3 + DEFAULT_PHOTOCARD_SIZE.bleed) - (img.height * scale) / 2,
           width: img.width * scale, height: img.height * scale,
-          rotation: 0, scaleX: 1, scaleY: 1, visible: true, locked: false, name: '导入的照片',
+          rotation: 0, scaleX: 1, scaleY: 1, visible: true, locked: false,
+          name: dedupName('导入的照片', frontState.layers.map(l => l.name)),
         }})
         window.history.replaceState({}, '')
       }
@@ -67,13 +68,14 @@ export default function PhotocardEditor() {
           x: mmToPx(DEFAULT_PHOTOCARD_SIZE.width / 2 + DEFAULT_PHOTOCARD_SIZE.bleed) - (img.width * scale) / 2,
           y: mmToPx(DEFAULT_PHOTOCARD_SIZE.height / 3 + DEFAULT_PHOTOCARD_SIZE.bleed) - (img.height * scale) / 2,
           width: img.width * scale, height: img.height * scale,
-          rotation: 0, scaleX: 1, scaleY: 1, visible: true, locked: false, name: file.name,
+          rotation: 0, scaleX: 1, scaleY: 1, visible: true, locked: false,
+          name: dedupName(file.name || '图片', state.layers.map(l => l.name)),
         }})
       }
       img.src = src
     }
     reader.readAsDataURL(file)
-  }, [dispatch])
+  }, [dispatch, state.layers])
 
   const handleAddText = useCallback(() => {
     dispatch({ type: 'ADD_LAYER', layer: {
@@ -81,11 +83,12 @@ export default function PhotocardEditor() {
       x: mmToPx(DEFAULT_PHOTOCARD_SIZE.width / 2 + DEFAULT_PHOTOCARD_SIZE.bleed) - 60,
       y: mmToPx(DEFAULT_PHOTOCARD_SIZE.height * 0.7 + DEFAULT_PHOTOCARD_SIZE.bleed),
       width: 120, height: 40,
-      rotation: 0, scaleX: 1, scaleY: 1, visible: true, locked: false, name: '文字',
+      rotation: 0, scaleX: 1, scaleY: 1, visible: true, locked: false,
+      name: dedupName('文字', state.layers.map(l => l.name)),
       fontSize: 18, fontFamily: 'Noto Sans SC', fontWeight: 400,
       fill: '#1e1b4b', stroke: '', strokeWidth: 0, align: 'center', shadow: undefined, opacity: 1,
     }})
-  }, [dispatch])
+  }, [dispatch, state.layers])
 
   const handleExport = useCallback(() => {
     const stage = (window as any).__editorStage as any

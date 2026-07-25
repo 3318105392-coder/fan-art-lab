@@ -1,6 +1,6 @@
 import { useReducer, useCallback, useState, useEffect, useRef } from 'react'
 import { EditorContext, editorReducer, createInitialState } from '../../store/editorStore'
-import { generateId, mmToPx } from '../../utils'
+import { generateId, mmToPx, dedupName } from '../../utils'
 import EditorCanvas from '../../components/editor/EditorCanvas'
 import PolaroidCanvas from '../../components/editor/PolaroidCanvas'
 import LayerPanel from '../../components/editor/LayerPanel'
@@ -58,13 +58,14 @@ export default function PolaroidEditor() {
           x: mmToPx(POLAROID_SIZE.width / 2 + POLAROID_SIZE.bleed) - (img.width * scale) / 2,
           y: mmToPx(POLAROID_SIZE.height * 0.15 + POLAROID_SIZE.bleed),
           width: img.width * scale, height: img.height * scale,
-          rotation: 0, scaleX: 1, scaleY: 1, visible: true, locked: false, name: file.name,
+          rotation: 0, scaleX: 1, scaleY: 1, visible: true, locked: false,
+          name: dedupName(file.name || '图片', state.layers.map(l => l.name)),
         }})
       }
       img.src = src
     }
     reader.readAsDataURL(file)
-  }, [dispatch])
+  }, [dispatch, state.layers])
 
   const handleAddText = useCallback(() => {
     dispatch({ type: 'ADD_LAYER', layer: {
@@ -72,11 +73,12 @@ export default function PolaroidEditor() {
       x: mmToPx(POLAROID_SIZE.width / 2 + POLAROID_SIZE.bleed) - 50,
       y: mmToPx(POLAROID_SIZE.height * 0.78 + POLAROID_SIZE.bleed),
       width: 100, height: 35,
-      rotation: 0, scaleX: 1, scaleY: 1, visible: true, locked: false, name: '文字',
+      rotation: 0, scaleX: 1, scaleY: 1, visible: true, locked: false,
+      name: dedupName('文字', state.layers.map(l => l.name)),
       fontSize: 14, fontFamily: 'Noto Sans SC', fontWeight: 400,
       fill: '#374151', stroke: '', strokeWidth: 0, align: 'center', shadow: undefined, opacity: 1,
     }})
-  }, [dispatch])
+  }, [dispatch, state.layers])
 
   const handleExport = useCallback(() => {
     const stage = (window as any).__editorStage as any

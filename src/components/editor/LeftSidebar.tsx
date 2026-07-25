@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom'
 import { useEditor } from '../../store/editorStore'
 import { FONT_OPTIONS, FONT_WEIGHTS, BG_COLORS } from '../../types'
 import type { TextLayer } from '../../types'
-import { generateId, mmToPx } from '../../utils'
+import { generateId, mmToPx, dedupName } from '../../utils'
 
 type Tab = 'preview' | 'template' | 'sticker' | 'text'
 
@@ -178,7 +178,8 @@ function TemplateTab() {
       id: generateId(), type: 'image', src,
       x: 0, y: 0, width: totalW, height: totalH,
       rotation: 0, scaleX: 1, scaleY: 1,
-      visible: true, locked: true, name: '模版',
+      visible: true, locked: true,
+      name: dedupName('模版', state.layers.map(l => l.name)),
     }})
   }
 
@@ -237,32 +238,32 @@ function StickerTab() {
     (STICKER_FILES[folder] || []).map(n => `/stickers/${folder}/IMG_${n}.png`)
 
   const addEmojiSticker = (emoji: string) => {
-    const id = generateId()
-    const { canvasSize } = state
+    const { canvasSize, layers } = state
+    const name = dedupName('Emoji', layers.map(l => l.name))
     dispatch({ type: 'ADD_LAYER', layer: {
-      id, type: 'text',
+      id: generateId(), type: 'text',
       x: mmToPx(canvasSize.width / 2 + canvasSize.bleed) - 20,
       y: mmToPx(canvasSize.height / 2 + canvasSize.bleed) - 20,
       width: 40, height: 40,
       rotation: 0, scaleX: 1, scaleY: 1,
-      visible: true, locked: false, name: '贴纸',
+      visible: true, locked: false, name,
       text: emoji, fontSize: 36, fontFamily: 'sans-serif', fontWeight: 400,
       fill: '#000000', stroke: '', strokeWidth: 0,
       align: 'center', opacity: 1,
     }})
   }
 
-  const addImageSticker = (src: string) => {
-    const id = generateId()
-    const { canvasSize } = state
-    const size = mmToPx(15) // ~56px
+  const addImageSticker = (src: string, catName: string) => {
+    const { canvasSize, layers } = state
+    const size = mmToPx(15)
+    const name = dedupName(catName, layers.map(l => l.name))
     dispatch({ type: 'ADD_LAYER', layer: {
-      id, type: 'sticker',
+      id: generateId(), type: 'sticker',
       x: mmToPx(canvasSize.width / 2 + canvasSize.bleed) - size / 2,
       y: mmToPx(canvasSize.height / 2 + canvasSize.bleed) - size / 2,
       width: size, height: size,
       rotation: 0, scaleX: 1, scaleY: 1,
-      visible: true, locked: false, name: '贴纸',
+      visible: true, locked: false, name,
       src,
     }})
   }
@@ -286,7 +287,7 @@ function StickerTab() {
         <div className={currentCat.type === 'image' ? 'grid grid-cols-4 gap-2' : 'grid grid-cols-5 gap-2'}>
           {stickers.map((s, i) => (
             currentCat.type === 'image' ? (
-              <button key={i} onClick={() => addImageSticker(s)}
+              <button key={i} onClick={() => addImageSticker(s, currentCat.label)}
                 className="aspect-square rounded-xl bg-gray-50 hover:bg-indigo-50 hover:scale-105
                   flex items-center justify-center transition-all border border-gray-100 overflow-hidden p-1">
                 <img src={s} alt="" className="max-w-full max-h-full object-contain"
@@ -317,14 +318,15 @@ function TextTab() {
   }
 
   const handleAddText = () => {
-    const id = generateId(); const { canvasSize } = state
+    const { canvasSize, layers } = state
+    const name = dedupName('文字', layers.map(l => l.name))
     dispatch({ type: 'ADD_LAYER', layer: {
-      id, type: 'text', text: '双击编辑文字',
+      id: generateId(), type: 'text', text: '双击编辑文字',
       x: mmToPx(canvasSize.width / 2 + canvasSize.bleed) - 60,
       y: mmToPx(canvasSize.height * 0.65 + canvasSize.bleed),
       width: 120, height: 40,
       rotation: 0, scaleX: 1, scaleY: 1,
-      visible: true, locked: false, name: '文字',
+      visible: true, locked: false, name,
       fontSize: 18, fontFamily: 'Noto Sans SC', fontWeight: 400,
       fill: '#1e1b4b', stroke: '', strokeWidth: 0,
       align: 'center', shadow: undefined, opacity: 1,

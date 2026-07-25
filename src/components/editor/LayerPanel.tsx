@@ -2,10 +2,10 @@ import { useEditor } from '../../store/editorStore'
 import type { Layer } from '../../types'
 
 const TYPE_LABELS: Record<string, string> = {
-  image: '🖼 图片',
-  text: '📝 文字',
-  sticker: '⭐ 贴纸',
-  shape: '⬜ 图形',
+  image: '图片',
+  text: '文字',
+  sticker: '贴纸',
+  shape: '图形',
 }
 
 export default function LayerPanel() {

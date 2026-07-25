@@ -4,6 +4,14 @@ export function generateId(): string {
   return `layer_${Date.now()}_${counter++}`
 }
 
+// Auto-number duplicate layer names: 爱心 → 爱心1, 爱心2
+export function dedupName(base: string, existing: string[]): string {
+  if (!existing.includes(base)) return base
+  let i = 1
+  while (existing.includes(`${base}${i}`)) i++
+  return `${base}${i}`
+}
+
 export function mmToPx(mm: number, dpi: number = 96): number {
   return (mm / 25.4) * dpi
 }
